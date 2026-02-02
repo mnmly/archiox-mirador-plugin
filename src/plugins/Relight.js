@@ -33,6 +33,10 @@ import RelightCycleDefaultLayer from './RelightCycleDefaultLayer';
 import RelightShininessIntensity from './RelightShininessIntensity';
 import RelightMetalnessIntensity from './RelightMetalnessIntensity';
 import RelightRoughnessIntensity from './RelightRoughnessIntensity';
+import RelightHandTracker from './RelightHandTracker';
+import RelightHandTrackingButton from './RelightHandTrackingButton';
+import RelightHandTrackerDebugToggle from './RelightHandTrackerDebugToggle';
+import RelightHandTrackerFlipToggle from './RelightHandTrackerFlipToggle';
 import { getLayers } from './state/selectors';
 
 /**
@@ -44,7 +48,7 @@ class Relight extends React.Component {
     super(props);
     this.state = {
       active: false,
-      flipped: false,
+      flipped: true,
       open: this.props.window.archioxPluginOpen || false,
       drawerOpen: false,
       loadHandlerAdded: false,
@@ -77,6 +81,13 @@ class Relight extends React.Component {
     } else {
       this.normalDepth = 1.0;
     }
+
+    // Hand tracking state
+    this.handTrackingEnabled = false;
+    this.lastHandX = null;
+    this.lastHandY = null;
+    this.showHandTrackerDebug = true;
+    this.handTrackerFlipX = false;
   }
   /**
    * The onMouseMove method tracks the mouse coordinates over the RelightLightDirectionControl component to allow the
@@ -170,6 +181,126 @@ class Relight extends React.Component {
    */
   onMouseLeave() {
     this.mouseDown = false;
+  }
+
+  /**
+   * The handTrackingHandler method toggles hand tracking mode on or off.
+   */
+  handTrackingHandler() {
+    this.handTrackingEnabled = !this.handTrackingEnabled;
+
+    // If disabling, keep last known position
+    if (!this.handTrackingEnabled) {
+      this.lastHandX = null;
+      this.lastHandY = null;
+    }
+
+    this.setState({
+      handTrackingEnabled: this.handTrackingEnabled,
+    });
+  }
+
+  /**
+   * The handTrackerDebugToggleHandler method toggles the visibility of the hand tracker debug view.
+   */
+  handTrackerDebugToggleHandler() {
+    this.showHandTrackerDebug = !this.showHandTrackerDebug;
+    this.setState({
+      showHandTrackerDebug: this.showHandTrackerDebug,
+    });
+  }
+
+  /**
+   * The handTrackerFlipToggleHandler method toggles X-axis flipping for hand tracking.
+   */
+  handTrackerFlipToggleHandler() {
+    this.handTrackerFlipX = !this.handTrackerFlipX;
+    this.setState({
+      handTrackerFlipX: this.handTrackerFlipX,
+    });
+  }
+
+  /**
+   * The onPinchGesture method is called when a pinch gesture is detected.
+   * It toggles the lighting render mode.
+   */
+  onPinchGesture() {
+    this.renderHandler();
+  }
+
+  /**
+   * The onHandPositionUpdate method receives hand tracking updates from RelightHandTracker.
+   * It converts MediaPipe normalized coordinates (0-1) to light direction coordinates (-1 to 1)
+   * and applies the same rotation and flip transforms as mouse control.
+   * Also updates the circular light direction visualizer.
+   * @param {number|null} x - Normalized x coordinate (0-1) or null if no hand
+   * @param {number|null} y - Normalized y coordinate (0-1) or null if no hand
+   * @param {boolean} detected - Whether hand is currently detected
+   */
+  onHandPositionUpdate(x, y, detected) {
+    // Only process if hand tracking is enabled
+    if (!this.handTrackingEnabled) return;
+
+    if (detected && x !== null && y !== null) {
+      // Store raw coordinates
+      this.lastHandX = x;
+      this.lastHandY = y;
+
+      // Convert to 0-100 range for consistency with mouse logic
+      const handX100 = x * 100;
+      const handY100 = y * 100;
+
+      // Update moveX/moveY for the circular visualizer
+      this.moveX = handX100;
+      this.moveY = handY100;
+
+      // Apply rotation transforms (same logic as onMouseMove)
+      const rotationModulus = this.rotation % 360;
+
+      switch (rotationModulus) {
+        case 0:
+          this.mouseX = this.moveX;
+          this.mouseY = this.moveY;
+          this.lightX = (this.mouseX / 100) * 2 - 1;
+          this.lightY = (this.mouseY / 100) * 2 - 1;
+          this.lightX = this.flipped ? -this.lightX : this.lightX;
+          break;
+        case -270:
+        case 90:
+          this.mouseX = this.moveY;
+          this.mouseY = this.moveX;
+          this.lightX = (this.mouseX / 100) * 2 - 1;
+          this.lightY = -((this.mouseY / 100) * 2 - 1);
+          this.lightY = this.flipped ? -this.lightY : this.lightY;
+          break;
+        case -180:
+        case 180:
+          this.mouseX = this.moveX;
+          this.mouseY = this.moveY;
+          this.lightX = -((this.mouseX / 100) * 2 - 1);
+          this.lightY = -((this.mouseY / 100) * 2 - 1);
+          this.lightX = this.flipped ? -this.lightX : this.lightX;
+          break;
+        case -90:
+        case 270:
+          this.mouseX = this.moveY;
+          this.mouseY = this.moveX;
+          this.lightX = -((this.mouseX / 100) * 2 - 1);
+          this.lightY = (this.mouseY / 100) * 2 - 1;
+          this.lightY = this.flipped ? -this.lightY : this.lightY;
+          break;
+      }
+
+      // Update threeCanvasProps
+      this.threeCanvasProps.lightX = this.lightX;
+      this.threeCanvasProps.lightY = this.lightY;
+
+      // Trigger re-render (this will also update the circular visualizer)
+      this.setState({
+        threeCanvasProps: this.threeCanvasProps,
+      });
+    }
+    // If not detected, keep last position (do nothing)
   }
 
   /**
@@ -737,6 +868,25 @@ class Relight extends React.Component {
             mode={this.renderMode}
             onClick={() => this.renderHandler()}
           />
+          <RelightHandTrackingButton
+            id={this.props.relightHandTrackingButtonID}
+            active={this.handTrackingEnabled}
+            onClick={() => this.handTrackingHandler()}
+          />
+          {this.handTrackingEnabled && (
+            <>
+              <RelightHandTrackerDebugToggle
+                id={this.props.relightHandTrackerDebugToggleID}
+                active={this.showHandTrackerDebug}
+                onClick={() => this.handTrackerDebugToggleHandler()}
+              />
+              <RelightHandTrackerFlipToggle
+                id={this.props.relightHandTrackerFlipToggleID}
+                active={this.handTrackerFlipX}
+                onClick={() => this.handTrackerFlipToggleHandler()}
+              />
+            </>
+          )}
           <RelightExpandSlidersButton
             drawerOpen={this.state.drawerOpen}
             aspect={this.aspect}
@@ -915,7 +1065,29 @@ class Relight extends React.Component {
       toolMenu = null;
     }
 
-    return <>{toolMenu}</>;
+    // Hand tracker component - only render when enabled
+    let handTracker = null;
+    if (this.visible && this.state.active && this.handTrackingEnabled) {
+      handTracker = (
+        <RelightHandTracker
+          id={this.props.relightHandTrackerID}
+          enabled={this.handTrackingEnabled}
+          showDebugView={this.showHandTrackerDebug}
+          flipX={this.handTrackerFlipX}
+          onHandPositionUpdate={(x, y, detected) =>
+            this.onHandPositionUpdate(x, y, detected)
+          }
+          onPinchGesture={() => this.onPinchGesture()}
+        />
+      );
+    }
+
+    return (
+      <>
+        {toolMenu}
+        {handTracker}
+      </>
+    );
   }
 }
 
@@ -962,6 +1134,14 @@ Relight.propTypes = {
   relightAnnotationButtonID: PropTypes.string,
   /** The relightCycleDefaultLayerID prop is the ID for the control **/
   relightCycleDefaultLayerID: PropTypes.string,
+  /** The relightHandTrackingButtonID prop is the ID for the hand tracking button control **/
+  relightHandTrackingButtonID: PropTypes.string,
+  /** The relightHandTrackerID prop is the ID for the hand tracker component **/
+  relightHandTrackerID: PropTypes.string,
+  /** The relightHandTrackerDebugToggleID prop is the ID for the hand tracker debug toggle button **/
+  relightHandTrackerDebugToggleID: PropTypes.string,
+  /** The relightHandTrackerFlipToggleID prop is the ID for the hand tracker flip toggle button **/
+  relightHandTrackerFlipToggleID: PropTypes.string,
 };
 
 export default Relight;
