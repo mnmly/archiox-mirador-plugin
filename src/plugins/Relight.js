@@ -422,8 +422,10 @@ class Relight extends React.Component {
     this.moveY = 50;
 
     const lightDirectionControl = document.getElementById(id);
+    if (lightDirectionControl) {
     lightDirectionControl.style.background =
       `radial-gradient(at ` + 50 + `% ` + 50 + `%, #ffffff, #000000)`;
+    }
 
     this.initialiseThreeCanvasProps();
 

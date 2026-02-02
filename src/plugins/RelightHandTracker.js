@@ -190,13 +190,30 @@ class RelightHandTracker extends React.Component {
 
     // Clear previous drawings
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    let offsetX = 0;
+    let offsetY = 0;
+    let drawWidth = 0;
+    let drawHeight = 0;
     // Draw video feed first (as background)
     if (video && video.readyState >= 2) {
       ctx.save();
       // Mirror the video horizontally for better UX
       ctx.scale(-1, 1);
-      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+
+      // Calculate scaling to maintain aspect ratio (Letterboxing)
+      const videoRatio = video.videoWidth / video.videoHeight;
+      drawWidth = canvas.width;
+      drawHeight = canvas.width / videoRatio;
+
+      if (drawHeight > canvas.height) {
+          drawHeight = canvas.height;
+          drawWidth = canvas.height * videoRatio;
+      }
+
+      offsetX = (canvas.width - drawWidth) / 2;
+      offsetY = (canvas.height - drawHeight) / 2;
+
+      ctx.drawImage(video, -canvas.width + offsetX, offsetY, drawWidth, drawHeight);
       ctx.restore();
     }
 
@@ -211,7 +228,7 @@ class RelightHandTracker extends React.Component {
 
     if (handDetected && results.landmarks && results.landmarks[handIndex]) {
       const landmarks = results.landmarks[handIndex];
-      this.drawLandmarks(ctx, landmarks);
+      this.drawLandmarks(ctx, landmarks, drawWidth, drawHeight, offsetX, offsetY);
       const indexFingerTip = landmarks[8];
       const thumbTip = landmarks[4];
 
@@ -257,67 +274,62 @@ class RelightHandTracker extends React.Component {
   /**
    * Draw hand landmarks on canvas
    */
-  drawLandmarks(ctx, landmarks) {
-    const canvas = this.canvasRef.current;
+/**
+ * Draw hand landmarks on canvas with proportional scaling and mirroring
+ */
+drawLandmarks(ctx, landmarks, drawWidth, drawHeight, offsetX, offsetY) {
+  const canvas = this.canvasRef.current;
 
-    // Apply mirroring to match the video feed
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.translate(-canvas.width, 0);
+  // 1. Setup the coordinate system
+  ctx.save();
+  
+  // 2. Apply mirroring: Flip horizontally across the center of the canvas
+  ctx.scale(-1, 1);
+  ctx.translate(-canvas.width, 0);
 
-    // Draw connections (bones)
-    const connections = [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4], // Thumb
-      [0, 5],
-      [5, 6],
-      [6, 7],
-      [7, 8], // Index finger
-      [0, 9],
-      [9, 10],
-      [10, 11],
-      [11, 12], // Middle finger
-      [0, 13],
-      [13, 14],
-      [14, 15],
-      [15, 16], // Ring finger
-      [0, 17],
-      [17, 18],
-      [18, 19],
-      [19, 20], // Pinky
-      [5, 9],
-      [9, 13],
-      [13, 17], // Palm
-    ];
+  // 3. Define the hand connections (bones)
+  const connections = [
+    [0, 1], [1, 2], [2, 3], [3, 4], // Thumb
+    [0, 5], [5, 6], [6, 7], [7, 8], // Index
+    [0, 9], [9, 10], [10, 11], [11, 12], // Middle
+    [0, 13], [13, 14], [14, 15], [15, 16], // Ring
+    [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
+    [5, 9], [9, 13], [13, 17], // Palm
+  ];
 
-    ctx.strokeStyle = '#00FF00';
-    ctx.lineWidth = 2;
+  // 4. Draw connections
+  ctx.strokeStyle = '#00FF00';
+  ctx.lineWidth = 2;
 
-    connections.forEach(([start, end]) => {
-      const startPoint = landmarks[start];
-      const endPoint = landmarks[end];
+  connections.forEach(([start, end]) => {
+    const startPoint = landmarks[start];
+    const endPoint = landmarks[end];
 
-      ctx.beginPath();
-      ctx.moveTo(startPoint.x * canvas.width, startPoint.y * canvas.height);
-      ctx.lineTo(endPoint.x * canvas.width, endPoint.y * canvas.height);
-      ctx.stroke();
-    });
+    // Scale normalized MediaPipe coordinates (0-1) to the proportional draw area
+    const sx = startPoint.x * drawWidth + offsetX;
+    const sy = startPoint.y * drawHeight + offsetY;
+    const ex = endPoint.x * drawWidth + offsetX;
+    const ey = endPoint.y * drawHeight + offsetY;
 
-    // Draw landmark points
-    ctx.fillStyle = '#FF0000';
-    landmarks.forEach((landmark, index) => {
-      const x = landmark.x * canvas.width;
-      const y = landmark.y * canvas.height;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  });
 
-      ctx.beginPath();
-      ctx.arc(x, y, index === 8 ? 5 : 3, 0, 2 * Math.PI); // Index finger tip is larger
-      ctx.fill();
-    });
+  // 5. Draw landmark points
+  landmarks.forEach((landmark, index) => {
+    const x = landmark.x * drawWidth + offsetX;
+    const y = landmark.y * drawHeight + offsetY;
 
-    ctx.restore();
-  }
+    ctx.fillStyle = index === 8 ? '#FF0000' : '#FFFFFF'; // Highlight index tip
+    ctx.beginPath();
+    ctx.arc(x, y, index === 8 ? 4 : 2, 0, 2 * Math.PI);
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
 
   /**
    * React lifecycle: component mounted
