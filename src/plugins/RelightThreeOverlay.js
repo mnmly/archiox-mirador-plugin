@@ -37,6 +37,12 @@ class RelightThreeOverlay extends React.Component {
       mouseMoving,
       rotation,
     } = this.props.threeCanvasProps;
+
+    console.log('[RelightThreeOverlay] Rendering with light coords:', {
+      lightX,
+      lightY,
+    });
+
     return (
       <RelightThreeCanvas
         id={id}

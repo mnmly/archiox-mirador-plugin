@@ -34,6 +34,9 @@ import RelightHelpDialog from './RelightHelpDialog';
 import RelightLayersMenu from './RelightLayersMenu';
 import RelightDownloadCurrentLayerButton from './RelightDownloadCurrentLayerButton';
 import RelightDraggableLightButton from './RelightDraggableLightButton';
+import RelightMicroHandTracker from './RelightMicroHandTracker';
+import WavingHandIcon from '@material-ui/icons/PanTool';
+
 
 /**
  * The Relight component is the parent group of the plug-in that is inserted into the Mirador viewer as a tool menu.
@@ -85,6 +88,12 @@ class Relight extends React.Component {
     } else {
       this.normalDepth = 1.0;
     }
+
+    // Hand tracking state
+    this.microHandTrackerEnabled = false;
+    this.lastHandX = null;
+    this.lastHandY = null;
+    this.handTrackerFlipX = false;
   }
   /**
    * The onMouseMove method tracks the mouse coordinates over the RelightLightDirectionControl component to allow the
@@ -339,7 +348,7 @@ class Relight extends React.Component {
     this.threeCanvasProps.helperOn = this.helperOn;
     this.threeCanvasProps.renderMode = this.renderMode;
     this.threeCanvasProps.rendererInstructions = getRendererInstructions(
-      this.props
+      this.props,
     );
     this.threeCanvasProps.id = this.props.relightThreeCanvasID;
     this.threeCanvasProps.zoom = this.props.viewer.world
@@ -364,7 +373,7 @@ class Relight extends React.Component {
       this.threeCanvasProps.maxTileLevel,
       this.albedoInfo,
       this.threeCanvasProps.albedoMap,
-      this.threeCanvasProps.normalMap
+      this.threeCanvasProps.normalMap,
     );
     this.threeCanvasProps.contentWidth = this.tileSets[1].albedoTiles.width;
     this.threeCanvasProps.contentHeight = this.tileSets[1].albedoTiles.height;
@@ -385,7 +394,7 @@ class Relight extends React.Component {
     // this tells the overlay where to begin in terms of x, y coordinates
     if (this.overlay) {
       this.overlay.update(
-        this.threeCanvasProps.rendererInstructions.intersectionTopLeft
+        this.threeCanvasProps.rendererInstructions.intersectionTopLeft,
       );
     }
   }
@@ -399,9 +408,10 @@ class Relight extends React.Component {
     this.threeCanvasProps.rotation = this.rotation;
     this.threeCanvasProps.mouseMoving = this.mouseMoving;
     this.threeCanvasProps.helperOn = this.helperOn;
+
     const zoom_level = this.props.viewer.viewport.getZoom(true);
     this.threeCanvasProps.rendererInstructions = getRendererInstructions(
-      this.props
+      this.props,
     );
     this.threeCanvasProps.zoom = this.props.viewer.viewport.viewer.world
       .getItemAt(0)
@@ -435,7 +445,7 @@ class Relight extends React.Component {
       this.props.windowId,
       this.props.updateLayers,
       excluded_maps,
-      this.canvasId
+      this.canvasId,
     );
 
     if (this.state.active) {
@@ -451,7 +461,7 @@ class Relight extends React.Component {
       this.props.viewer.addOverlay(this.threeCanvas);
       this.overlay = this.props.viewer.getOverlayById(this.threeCanvas);
       this.overlay.update(
-        this.threeCanvasProps.rendererInstructions.intersectionTopLeft
+        this.threeCanvasProps.rendererInstructions.intersectionTopLeft,
       );
       // We need to call forceRedraw each time we update the overlay, if this line is remove, the overlay will
       // glitch and not re-render until we cause the viewport-change event to trigger
@@ -469,7 +479,7 @@ class Relight extends React.Component {
     !this.state.active
       ? ReactDOM.render(
           <RelightThreeOverlay threeCanvasProps={this.threeCanvasProps} />,
-          this.threeCanvas
+          this.threeCanvas,
         )
       : ReactDOM.unmountComponentAtNode(this.threeCanvas);
   }
@@ -638,6 +648,106 @@ class Relight extends React.Component {
   }
 
   /**
+   * The microHandTrackerHandler method toggles the micro-handpose tracker on/off.
+   */
+  microHandTrackerHandler() {
+    this.microHandTrackerEnabled = !this.microHandTrackerEnabled;
+
+    if (!this.microHandTrackerEnabled) {
+      this.lastHandX = null;
+      this.lastHandY = null;
+      // Reset mouseMoving when hand tracking stops
+      this.threeCanvasProps.mouseMoving = false;
+    }
+
+    this.setState({
+      microHandTrackerEnabled: this.microHandTrackerEnabled,
+    });
+  }
+
+  /**
+   * The onMicroHandUpdate method receives position updates from the hand tracker
+   * and converts them to light direction coordinates.
+   */
+  onMicroHandUpdate(handX, handY) {
+    console.log('[Relight] Hand update received:', { handX, handY });
+
+    const rotationModulus = this.rotation % 360;
+    let lightX, lightY;
+
+    switch (rotationModulus) {
+      case 0:
+        lightX = handX * 2 - 1;
+        lightY = handY * 2 - 1;
+        break;
+      case 90:
+      case -270:
+        lightX = handY * 2 - 1;
+        lightY = -(handX * 2 - 1);
+        break;
+      case 180:
+      case -180:
+        lightX = -(handX * 2 - 1);
+        lightY = -(handY * 2 - 1);
+        break;
+      case 270:
+      case -90:
+        lightX = -(handY * 2 - 1);
+        lightY = handX * 2 - 1;
+        break;
+    }
+
+    lightX = this.flipped ? -lightX : lightX;
+
+    console.log('[Relight] Calculated light coords:', {
+      lightX,
+      lightY,
+      rotation: this.rotation,
+      flipped: this.flipped,
+    });
+
+    this.lightX = lightX;
+    this.lightY = lightY;
+
+    // Convert light coordinates to mouse coordinates (0-100 range) for RelightLightDirection
+    // Light coords are -1 to 1, convert to percentage 0-100
+    this.moveX = ((lightX + 1) / 2) * 100;
+    this.moveY = ((lightY + 1) / 2) * 100;
+
+    // Update threeCanvasProps with new light coordinates
+    this.threeCanvasProps.lightX = lightX;
+    this.threeCanvasProps.lightY = lightY;
+
+    // Also update mouseX and mouseY for consistency with drag handler
+    this.threeCanvasProps.mouseX = this.moveX;
+    this.threeCanvasProps.mouseY = this.moveY;
+
+    // Ensure mouseMoving is true so moveLight() executes in ThreeCanvas
+    this.threeCanvasProps.mouseMoving = true;
+
+    console.log('[Relight] Updating threeCanvasProps:', {
+      lightX,
+      lightY,
+      hasImages: !!this.threeCanvasProps.images,
+    });
+
+    // Force re-render by updating state
+    this.setState(
+      {
+        threeCanvasProps: { ...this.threeCanvasProps },
+      },
+      () => {
+        console.log('[Relight] State updated, threeCanvasProps:', {
+          lightX: this.threeCanvasProps.lightX,
+          lightY: this.threeCanvasProps.lightY,
+        });
+      },
+    );
+
+    console.log('[Relight] State update triggered');
+  }
+
+  /**
    * The componentDidUpdate method is a standard React class method that is used to run other methods whenever state or
    * props are updated.  Here we used it to re-render the overlay if there is a change in state detected.
    * @param prevProps the previous props sent to the Relight component
@@ -651,7 +761,7 @@ class Relight extends React.Component {
     this.state.active
       ? ReactDOM.render(
           <RelightThreeOverlay threeCanvasProps={this.threeCanvasProps} />,
-          this.threeCanvas
+          this.threeCanvas,
         )
       : null;
   }
@@ -724,7 +834,7 @@ class Relight extends React.Component {
           this.props.windowId,
           this.props.updateLayers,
           excluded_maps,
-          this.canvasId
+          this.canvasId,
         );
 
         // disable click to zoom
@@ -754,7 +864,7 @@ class Relight extends React.Component {
             this.props.windowId,
             this.props.updateLayers,
             excluded_maps,
-            this.canvasId
+            this.canvasId,
           );
           this.visible = false;
           this.setState({ active: false });
@@ -971,7 +1081,7 @@ class Relight extends React.Component {
               this.onMouseMove(
                 event,
                 this.props.relightLightDirectionID,
-                this.rotation
+                this.rotation,
               )
             }
             onMouseDown={(event) => this.onMouseDown(event)}
@@ -981,7 +1091,7 @@ class Relight extends React.Component {
               this.onMouseMove(
                 event,
                 this.props.relightLightDirectionID,
-                this.rotation
+                this.rotation,
               )
             }
             rotation={this.rotation}
@@ -1033,11 +1143,24 @@ class Relight extends React.Component {
               onClick={() => this.menuHandler()}
               open={this.state.open}
             />
+
             <RelightTorchButton
               id={this.props.relightTorchButtonID}
               onClick={() => this.torchHandler()}
               active={this.state.active}
             />
+
+            {this.state.active && (
+              <button
+                className={`relight-light-button ${
+                  this.state.microHandTrackerEnabled ? 'active' : ''
+                }`}
+                title="Toggle micro-handpose tracking"
+                onClick={() => this.microHandTrackerHandler()}
+              >
+                <WavingHandIcon />
+              </button>
+            )}
             <RelightLayersMenuButton
               id={this.props.relightLayersMenuButtonID}
               onClick={() => this.defaultLayerHandler()}
@@ -1075,13 +1198,25 @@ class Relight extends React.Component {
     return (
       <>
         {toolMenu}
-        <div
-          className="draggable-container"
-          style={{
-            height: this.draggableHeight ? this.draggableHeight + 'px' : 0,
-            width: this.draggableWidth ? this.draggableWidth + 'px' : 0,
-          }}
-        ></div>
+        {this.state.active && this.state.microHandTrackerEnabled && (
+          <RelightMicroHandTracker
+            onHandUpdate={(x, y) => {
+              console.log('[Relight] onHandUpdate callback triggered');
+              this.onMicroHandUpdate(x, y);
+            }}
+            rotation={this.rotation}
+            flipped={this.flipped}
+          />
+        )}
+        {this.state.active && !this.state.microHandTrackerEnabled && (
+          <div
+            className="draggable-container"
+            style={{
+              height: this.draggableHeight ? this.draggableHeight + 'px' : 0,
+              width: this.draggableWidth ? this.draggableWidth + 'px' : 0,
+            }}
+          ></div>
+        )}
       </>
     );
   }

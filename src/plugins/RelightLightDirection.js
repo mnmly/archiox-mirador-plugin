@@ -34,6 +34,14 @@ class RelightLightDirection extends React.Component {
    * @param {number} angle The current angle that the OpenSeaDragon canvas is rotated by
    * */
   rotatePoint(x, y, rotate, flipped, angle = 0) {
+    console.log('[RelightLightDirection] rotatePoint called with:', {
+      x,
+      y,
+      rotate,
+      flipped,
+      angle,
+    });
+
     if (!rotate) {
       switch (angle) {
         case 0:
@@ -70,6 +78,10 @@ class RelightLightDirection extends React.Component {
           Math.abs(ny) +
           `%, #ffffff, #000000)`,
       });
+      console.log(
+        '[RelightLightDirection] Updated gradient (rotate/flipped):',
+        { nx, ny },
+      );
     } else {
       this.setState({
         calculatedBackgroundStyle:
@@ -79,6 +91,7 @@ class RelightLightDirection extends React.Component {
           Math.abs(y) +
           `%, #ffffff, #000000)`,
       });
+      console.log('[RelightLightDirection] Updated gradient:', { x, y });
     }
   }
 
@@ -91,13 +104,22 @@ class RelightLightDirection extends React.Component {
    * getSnapShotBeforeUpdate to create this
    * **/
   componentDidUpdate(prevProps, _prevState, _snapshot) {
+    console.log('[RelightLightDirection] componentDidUpdate', {
+      prevMoveX: prevProps.moveX,
+      currMoveX: this.props.moveX,
+      prevMoveY: prevProps.moveY,
+      currMoveY: this.props.moveY,
+      rotationChanged: prevProps.rotation !== this.props.rotation,
+      flippedChanged: prevProps.flipped !== this.props.flipped,
+    });
+
     if (prevProps.rotation !== this.props.rotation) {
       this.rotatePoint(
         this.props.moveX,
         this.props.moveY,
         true,
         this.props.flipped,
-        this.props.rotation % 360
+        this.props.rotation % 360,
       );
     }
     if (
@@ -109,7 +131,7 @@ class RelightLightDirection extends React.Component {
         this.props.moveY,
         false,
         this.props.flipped,
-        this.props.rotation % 360
+        this.props.rotation % 360,
       );
     }
     if (prevProps.flipped !== this.props.flipped) {
@@ -118,7 +140,7 @@ class RelightLightDirection extends React.Component {
         this.props.moveY,
         false,
         this.props.flipped,
-        this.props.rotation % 360
+        this.props.rotation % 360,
       );
     }
   }

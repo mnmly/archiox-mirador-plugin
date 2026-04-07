@@ -37,7 +37,7 @@ class RelightThreeCanvas extends React.Component {
     });
     this.renderer.setSize(
       this.state.width * this.state.zoom,
-      this.state.height * this.state.zoom
+      this.state.height * this.state.zoom,
     );
     this.wireframe = false;
     this.targetGeometry = new THREE.BoxGeometry(10, 10, 0.2);
@@ -52,7 +52,7 @@ class RelightThreeCanvas extends React.Component {
       this.props.contentHeight / 2,
       this.props.contentHeight / -2,
       -1,
-      1200
+      1200,
     );
     this.camera.position.set(0, 0, 1200);
 
@@ -71,18 +71,18 @@ class RelightThreeCanvas extends React.Component {
 
     this.ambientLight = new THREE.AmbientLight(
       0xffffff,
-      this.props.ambientIntensity
+      this.props.ambientIntensity,
     );
     this.directionalLight = new THREE.DirectionalLight(
       0xffffff,
-      this.props.directionalIntensity
+      this.props.directionalIntensity,
     );
 
     this.directionalLight.position.set(0, 0, 999);
     this.directionalLightHelper = new THREE.DirectionalLightHelper(
       this.directionalLight,
       100,
-      '#1967d2'
+      '#1967d2',
     );
 
     this.directionalLight.castShadow = true;
@@ -112,7 +112,7 @@ class RelightThreeCanvas extends React.Component {
       props.intersection.x * props.zoom,
       props.intersection.y * props.zoom,
       props.intersection.width * props.zoom,
-      props.intersection.height * props.zoom
+      props.intersection.height * props.zoom,
     );
   }
 
@@ -153,7 +153,7 @@ class RelightThreeCanvas extends React.Component {
           this.props.tileSets[minTileLevel].albedoTiles.urls[i]
         ].normalScale = new THREE.Vector2(
           this.props.normalDepth,
-          this.props.normalDepth
+          this.props.normalDepth,
         );
 
         this.threeResources[minTileLevel]['materials'][
@@ -212,7 +212,7 @@ class RelightThreeCanvas extends React.Component {
               flatShading: true,
               normalScale: new THREE.Vector2(
                 this.props.normalDepth,
-                this.props.normalDepth
+                this.props.normalDepth,
               ),
               metalness: this.props.metalness,
               roughness: this.props.roughness,
@@ -226,7 +226,7 @@ class RelightThreeCanvas extends React.Component {
               flatShading: true,
               normalScale: new THREE.Vector2(
                 this.props.normalDepth,
-                this.props.normalDepth
+                this.props.normalDepth,
               ),
               shininess: this.props.shininess,
               specular: '#ffffff',
@@ -240,7 +240,7 @@ class RelightThreeCanvas extends React.Component {
               flatShading: true,
               normalScale: new THREE.Vector2(
                 this.props.normalDepth,
-                this.props.normalDepth
+                this.props.normalDepth,
               ),
               metalness: this.props.metalness,
               roughness: this.props.roughness,
@@ -252,7 +252,7 @@ class RelightThreeCanvas extends React.Component {
               flatShading: true,
               normalScale: new THREE.Vector2(
                 this.props.normalDepth,
-                this.props.normalDepth
+                this.props.normalDepth,
               ),
               shininess: this.props.shininess,
               specular: '#ffffff',
@@ -270,7 +270,7 @@ class RelightThreeCanvas extends React.Component {
 
         const plane_geometry = new THREE.PlaneGeometry(
           this.props.tileSets[i].albedoTiles.tiles[j].w,
-          this.props.tileSets[i].albedoTiles.tiles[j].h
+          this.props.tileSets[i].albedoTiles.tiles[j].h,
         );
 
         let mesh = new THREE.Mesh(plane_geometry, plane_material);
@@ -308,7 +308,7 @@ class RelightThreeCanvas extends React.Component {
   rerender() {
     this.renderer.setSize(
       this.props.intersection.width * this.props.zoom,
-      this.props.intersection.height * this.props.zoom
+      this.props.intersection.height * this.props.zoom,
     );
     this._cameraOffset(this.camera, this.props);
 
@@ -334,7 +334,7 @@ class RelightThreeCanvas extends React.Component {
         this.props.intersection.width / 2 -
         this.props.contentWidth / 2,
       yOffset,
-      0
+      0,
     );
     this.moveLight();
   }
@@ -351,7 +351,7 @@ class RelightThreeCanvas extends React.Component {
       this.directionalLight.position.set(
         this.target.position.x + pos.x * this.props.intersection.width,
         this.target.position.y + pos.y * this.props.intersection.height,
-        999
+        999,
       );
       this.directionalLight.updateMatrixWorld();
       this.target.updateMatrixWorld();
@@ -404,6 +404,13 @@ class RelightThreeCanvas extends React.Component {
    */
   // eslint-disable-next-line no-unused-vars
   componentDidUpdate(prevProps, prevState, snapshot) {
+    console.log('[RelightThreeCanvas] componentDidUpdate', {
+      prevLightX: prevProps.lightX,
+      currLightX: this.props.lightX,
+      prevLightY: prevProps.lightY,
+      currLightY: this.props.lightY,
+    });
+
     this.directionalLightHelper.visible = this.props.helperOn;
     this.target.visible = this.props.helperOn;
 
@@ -436,6 +443,7 @@ class RelightThreeCanvas extends React.Component {
       prevProps.ambientIntensity !== this.props.ambientIntensity ||
       prevProps.normalDepth !== this.props.normalDepth
     ) {
+      console.log('[RelightThreeCanvas] Light props changed, updating light');
       this.ambientLight.intensity = this.props.ambientIntensity;
       this.directionalLight.intensity = this.props.directionalIntensity;
       this.moveLight();
