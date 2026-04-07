@@ -30,7 +30,7 @@ class RelightMicroHandTracker extends React.Component {
     } catch (error) {
       console.error(
         '[RelightMicroHandTracker] Failed to initialize hand tracker:',
-        error,
+        error
       );
       this.setState({
         error: 'Failed to load hand tracking. Please check camera permissions.',
@@ -62,7 +62,7 @@ class RelightMicroHandTracker extends React.Component {
     } catch (error) {
       console.error(
         '[RelightMicroHandTracker] Failed to initialize detector:',
-        error,
+        error
       );
       throw error;
     }

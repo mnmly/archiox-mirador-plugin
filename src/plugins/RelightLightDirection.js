@@ -80,7 +80,7 @@ class RelightLightDirection extends React.Component {
       });
       console.log(
         '[RelightLightDirection] Updated gradient (rotate/flipped):',
-        { nx, ny },
+        { nx, ny }
       );
     } else {
       this.setState({
@@ -119,7 +119,7 @@ class RelightLightDirection extends React.Component {
         this.props.moveY,
         true,
         this.props.flipped,
-        this.props.rotation % 360,
+        this.props.rotation % 360
       );
     }
     if (
@@ -131,7 +131,7 @@ class RelightLightDirection extends React.Component {
         this.props.moveY,
         false,
         this.props.flipped,
-        this.props.rotation % 360,
+        this.props.rotation % 360
       );
     }
     if (prevProps.flipped !== this.props.flipped) {
@@ -140,7 +140,7 @@ class RelightLightDirection extends React.Component {
         this.props.moveY,
         false,
         this.props.flipped,
-        this.props.rotation % 360,
+        this.props.rotation % 360
       );
     }
   }

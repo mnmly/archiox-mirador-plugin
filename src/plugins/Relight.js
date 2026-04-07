@@ -37,7 +37,6 @@ import RelightDraggableLightButton from './RelightDraggableLightButton';
 import RelightMicroHandTracker from './RelightMicroHandTracker';
 import WavingHandIcon from '@material-ui/icons/PanTool';
 
-
 /**
  * The Relight component is the parent group of the plug-in that is inserted into the Mirador viewer as a tool menu.
  * It is composed of a group of buttons and a group of controls that make up the relighting plug-in.
@@ -348,7 +347,7 @@ class Relight extends React.Component {
     this.threeCanvasProps.helperOn = this.helperOn;
     this.threeCanvasProps.renderMode = this.renderMode;
     this.threeCanvasProps.rendererInstructions = getRendererInstructions(
-      this.props,
+      this.props
     );
     this.threeCanvasProps.id = this.props.relightThreeCanvasID;
     this.threeCanvasProps.zoom = this.props.viewer.world
@@ -373,7 +372,7 @@ class Relight extends React.Component {
       this.threeCanvasProps.maxTileLevel,
       this.albedoInfo,
       this.threeCanvasProps.albedoMap,
-      this.threeCanvasProps.normalMap,
+      this.threeCanvasProps.normalMap
     );
     this.threeCanvasProps.contentWidth = this.tileSets[1].albedoTiles.width;
     this.threeCanvasProps.contentHeight = this.tileSets[1].albedoTiles.height;
@@ -394,7 +393,7 @@ class Relight extends React.Component {
     // this tells the overlay where to begin in terms of x, y coordinates
     if (this.overlay) {
       this.overlay.update(
-        this.threeCanvasProps.rendererInstructions.intersectionTopLeft,
+        this.threeCanvasProps.rendererInstructions.intersectionTopLeft
       );
     }
   }
@@ -411,7 +410,7 @@ class Relight extends React.Component {
 
     const zoom_level = this.props.viewer.viewport.getZoom(true);
     this.threeCanvasProps.rendererInstructions = getRendererInstructions(
-      this.props,
+      this.props
     );
     this.threeCanvasProps.zoom = this.props.viewer.viewport.viewer.world
       .getItemAt(0)
@@ -445,7 +444,7 @@ class Relight extends React.Component {
       this.props.windowId,
       this.props.updateLayers,
       excluded_maps,
-      this.canvasId,
+      this.canvasId
     );
 
     if (this.state.active) {
@@ -461,7 +460,7 @@ class Relight extends React.Component {
       this.props.viewer.addOverlay(this.threeCanvas);
       this.overlay = this.props.viewer.getOverlayById(this.threeCanvas);
       this.overlay.update(
-        this.threeCanvasProps.rendererInstructions.intersectionTopLeft,
+        this.threeCanvasProps.rendererInstructions.intersectionTopLeft
       );
       // We need to call forceRedraw each time we update the overlay, if this line is remove, the overlay will
       // glitch and not re-render until we cause the viewport-change event to trigger
@@ -479,7 +478,7 @@ class Relight extends React.Component {
     !this.state.active
       ? ReactDOM.render(
           <RelightThreeOverlay threeCanvasProps={this.threeCanvasProps} />,
-          this.threeCanvas,
+          this.threeCanvas
         )
       : ReactDOM.unmountComponentAtNode(this.threeCanvas);
   }
@@ -741,7 +740,7 @@ class Relight extends React.Component {
           lightX: this.threeCanvasProps.lightX,
           lightY: this.threeCanvasProps.lightY,
         });
-      },
+      }
     );
 
     console.log('[Relight] State update triggered');
@@ -761,7 +760,7 @@ class Relight extends React.Component {
     this.state.active
       ? ReactDOM.render(
           <RelightThreeOverlay threeCanvasProps={this.threeCanvasProps} />,
-          this.threeCanvas,
+          this.threeCanvas
         )
       : null;
   }
@@ -834,7 +833,7 @@ class Relight extends React.Component {
           this.props.windowId,
           this.props.updateLayers,
           excluded_maps,
-          this.canvasId,
+          this.canvasId
         );
 
         // disable click to zoom
@@ -864,7 +863,7 @@ class Relight extends React.Component {
             this.props.windowId,
             this.props.updateLayers,
             excluded_maps,
-            this.canvasId,
+            this.canvasId
           );
           this.visible = false;
           this.setState({ active: false });
@@ -1081,7 +1080,7 @@ class Relight extends React.Component {
               this.onMouseMove(
                 event,
                 this.props.relightLightDirectionID,
-                this.rotation,
+                this.rotation
               )
             }
             onMouseDown={(event) => this.onMouseDown(event)}
@@ -1091,7 +1090,7 @@ class Relight extends React.Component {
               this.onMouseMove(
                 event,
                 this.props.relightLightDirectionID,
-                this.rotation,
+                this.rotation
               )
             }
             rotation={this.rotation}
