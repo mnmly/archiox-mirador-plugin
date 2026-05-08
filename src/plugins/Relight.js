@@ -36,6 +36,7 @@ import RelightDownloadCurrentLayerButton from './RelightDownloadCurrentLayerButt
 import RelightDraggableLightButton from './RelightDraggableLightButton';
 import RelightMicroHandTracker from './RelightMicroHandTracker';
 import WavingHandIcon from '@material-ui/icons/PanTool';
+import { MiradorMenuButton } from 'mirador/dist/es/src/components/MiradorMenuButton';
 
 /**
  * The Relight component is the parent group of the plug-in that is inserted into the Mirador viewer as a tool menu.
@@ -1150,15 +1151,19 @@ class Relight extends React.Component {
             />
 
             {this.state.active && (
-              <button
-                className={`relight-light-button ${
-                  this.state.microHandTrackerEnabled ? 'active' : ''
-                }`}
-                title="Toggle micro-handpose tracking"
-                onClick={() => this.microHandTrackerHandler()}
-              >
-                <WavingHandIcon />
-              </button>
+              <div className="relightMenuButton">
+                <MiradorMenuButton
+                  aria-label="Toggle micro-handpose tracking"
+                  style={{
+                    backgroundColor: this.state.microHandTrackerEnabled
+                      ? 'rgba(0,0,0,0.2)'
+                      : 'rgba(0,0,0,0)',
+                  }}
+                  onClick={() => this.microHandTrackerHandler()}
+                >
+                  <WavingHandIcon />
+                </MiradorMenuButton>
+              </div>
             )}
             <RelightLayersMenuButton
               id={this.props.relightLayersMenuButtonID}

@@ -153,8 +153,8 @@ class RelightMicroHandTracker extends React.Component {
 
         <video
           ref={this.videoRef}
+          className="relight-hand-tracker-video"
           style={{
-            width: '200px',
             height: 'auto',
             position: 'fixed',
             bottom: '20px',
